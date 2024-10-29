@@ -1,0 +1,9 @@
+C:\Users\sperry\Documents\SharpDevelop Projects\Evader QC\Evader QC\obj\Debug\Evader QC.csprojResolveAssemblyReference.cache
+C:\Users\sperry\Documents\SharpDevelop Projects\Evader QC\Evader QC\obj\Debug\Evader QC.csproj.GenerateResource.Cache
+C:\Users\sperry\Documents\SharpDevelop Projects\Evader QC\Evader QC\bin\Debug\Evader QC.exe.config
+C:\Users\sperry\Documents\SharpDevelop Projects\Evader QC\Evader QC\bin\Debug\Evader QC.exe
+C:\Users\sperry\Documents\SharpDevelop Projects\Evader QC\Evader QC\bin\Debug\Evader QC.pdb
+C:\Users\sperry\Documents\SharpDevelop Projects\Evader QC\Evader QC\obj\Debug\Evader QC.exe
+C:\Users\sperry\Documents\SharpDevelop Projects\Evader QC\Evader QC\obj\Debug\Evader QC.pdb
+C:\Users\sperry\Documents\SharpDevelop Projects\Evader QC\Evader QC\obj\Debug\Evader_QC.MainForm.resources
+C:\Users\sperry\Documents\SharpDevelop Projects\Evader QC\Evader QC\obj\Debug\Evader_QC.About.resources
