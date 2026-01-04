@@ -6,32 +6,42 @@
  * 
  * To change this template use Tools | Options | Coding | Edit Standard Headers.
  */
+using Halliburton.INSITE.ClassAdi;
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Windows.Forms;
 using System.ComponentModel;
-using System.Threading.Tasks;
+using System.Diagnostics;
+using System.Drawing;
 using System.Globalization;
-using Halliburton.INSITE.ClassAdi;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Xml.Linq;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
 
 namespace Evader_QC
 {
-	
-	/// <summary>
-	/// Description of MainForm.
-	/// </summary>
-	public partial class MainForm : Form
-	{
-		private AdiDB db = new AdiDB();
-		private AdiBasePrimaryKey pk = new AdiBasePrimaryKey();
-		
-		public BindingList<Survey> SurveysList = new BindingList<Survey>();
-		public BindingList<StatusWord> StatusWordList = new BindingList<StatusWord>();
-		
-		private bool refreshing = false;
-		
-		public MainForm()
+
+    /// <summary>
+    /// Description of MainForm.
+    /// </summary>
+    public partial class MainForm : Form
+    {
+        private AdiDB db = new AdiDB(true);
+        public BindingList<MWDSurvey> MWDSurveysList = new BindingList<MWDSurvey>();
+        public BindingList<GyroSurvey> GyroSurveysList = new BindingList<GyroSurvey>();
+        public BindingList<StatusWord> StatusWordList = new BindingList<StatusWord>();
+        private string gyrocolunaOrdenada = "";
+        private string mwdcolunaOrdenada = "";
+        private ListSortDirection gyrodirecaoOrdenacao = ListSortDirection.Ascending;
+        private ListSortDirection mwddirecaoOrdenacao = ListSortDirection.Ascending;
+        private bool refreshing = false;
+        private List<SurveyType> MWWSurveyTypes = new List<SurveyType>();
+        private List<SurveyType> GyroSurveyTypes = new List<SurveyType>();
+
+        public MainForm()
 		{
 			//
 			// The InitializeComponent() call is required for Windows Forms designer support.
@@ -39,23 +49,36 @@ namespace Evader_QC
 			InitializeComponent();
 			
 			// Set click events to async methods
-			getDataBtn.Click += async (sender, e) => await LoadDataAsyncEventHandler(sender, e);
-			getStatusWordBtn.Click += async (sender, e) => await LoadStatusWordAsyncEventHandler(sender, e);
+			getGyroDataBtn.Click += async (sender, e) => await LoadGyroDataAsyncEventHandler(sender, e);
+            getMWDDataBtn.Click += async (sender, e) => await LoadMWDDataAsyncEventHandler(sender, e);
+            getStatusWordBtn.Click += async (sender, e) => await LoadStatusWordAsyncEventHandler(sender, e);
 			timer.Tick += async (sender, e) => await TickAsyncEventHandler(sender, e);
 			serverSelectBtn.Click += async (sender, e) => await dbSelectAsyncEventHandler(sender, e);
 			selectServerToolStripMenuItem.Click += async (sender, e) => await dbSelectAsyncEventHandler(sender, e);
-			
-		}
+
+            MWWSurveyTypes.Add(new SurveyType("Raw (Realtime)", "Realtime"));
+            MWWSurveyTypes.Add(new SurveyType("SAG Corrected", "Sag Corrected Evader"));
+            MWWSurveyTypes.Add(new SurveyType("Official", "Oficial"));
+
+            
+            
+
+        }
 		
 		void MainFormLoad(object sender, EventArgs e)
 		{
 			LoadServerDb();
-			SurveyDataGrid.DataSource = SurveysList;
-			StatusWordDataGrid.DataSource = StatusWordList;
+            GyroSurveys.DataSource = GyroSurveysList;
+            MWDSurveys.DataSource = MWDSurveysList;
+            StatusWordDataGrid.DataSource = StatusWordList;
 			
-			SetColumnHeadersToUpper(SurveyDataGrid);
-			SetColumnHeadersToUpper(StatusWordDataGrid);
-		}
+			SetColumnHeadersToUpper(GyroSurveys);
+            SetColumnHeadersToUpper(MWDSurveys);
+            SetColumnHeadersToUpper(StatusWordDataGrid);
+
+			MWDSurveys.Columns[0].SortMode = DataGridViewColumnSortMode.Automatic;
+            GyroSurveys.Columns[0].SortMode = DataGridViewColumnSortMode.Automatic;
+        }
 		
 		private void SetColumnHeadersToUpper(DataGridView dataGridView)
 		{
@@ -85,8 +108,8 @@ namespace Evader_QC
 					MessageBox.Show("No Evader data found in this server.");
 				} 
 				
-				wellList.DataSource = evaderOnly.Checked ? db.QueryWellList("Evader RT") : db.QueryWellList();;
-				
+				wellList.DataSource = evaderOnly.Checked ? db.QueryWellList("Evader RT") : db.QueryWellList();
+
 				if(wellList.Items.Contains(db.CurrentWell)){
 					wellList.SelectedItem = db.CurrentWell;
 					runList.SelectedItem = db.CurrentRun;
@@ -96,210 +119,273 @@ namespace Evader_QC
 				MessageBox.Show("Failed to connect");
 			}
 			finally{
-					
-				
-				
 				server.Text = db.Server;
 				sbActiveWell.Text = db.CurrentWell;
 				sbActiveRun.Text = db.CurrentRun;
 				status.Text = "Connected";
-				SurveysList.Clear();
-				StatusWordList.Clear();
-			}
+				GyroSurveysList.Clear();
+                MWDSurveysList.Clear();
+                StatusWordList.Clear();
+
+            }
 			setEnable(true);
 		}
 		
-		private async Task LoadDataAsyncEventHandler(object sender, EventArgs e)
+		private async Task LoadGyroDataAsyncEventHandler(object sender, EventArgs e)
 		{
-			getDataBtn.Enabled = false;
-			
-			await LoadEvaderData();
-			
-			getDataBtn.Enabled = true;
+			getGyroDataBtn.Enabled = false;
+			GetGyroSurveys();
+            LastColumnFont();
+            getGyroDataBtn.Enabled = true;
 		}
-		
-		private async Task LoadStatusWordAsyncEventHandler(object sender, EventArgs e)
+
+        private async Task LoadMWDDataAsyncEventHandler(object sender, EventArgs e)
+        {
+            getMWDDataBtn.Enabled = false;
+			GetOficialSurveys();
+            getMWDDataBtn.Enabled = true;
+        }
+
+        private async Task LoadStatusWordAsyncEventHandler(object sender, EventArgs e)
 		{
 			getStatusWordBtn.Enabled = false;
-			
-			await LoadBateryData();
-			
-			getStatusWordBtn.Enabled = true;
+			GetStatus();
+            getStatusWordBtn.Enabled = true;
 		}
 		
-		private async Task LoadEvaderData()
-		{
-			status.Text = "Gathering Survey data from server...";
-			await Task.Delay(300);
-			pk.Well = wellList.SelectedItem.ToString();
-			pk.Run = runList.SelectedItem.ToString();
-			pk.RecordName = "Survey";
-			pk.Description = "Realtime_Evader";
-			
-			AdiDataSetCache adiDataSetCache = new AdiDataSetCache(db,pk,AdiDataSet.OpenMode.Read);
-			
-			if(!adiDataSetCache.Open()){
-				if(!refreshing){
-					MessageBox.Show("Record 'Survey | Realtime_Evader' not found on selected Well/Run.");
-					status.Text = "";
-				} else {
-					status.Text = "Record 'Survey | Realtime_Evader' not found on selected Well/Run.";
-				}
-				
-				return;
-			}
-			
-			List<AdiVarInfo> variables = adiDataSetCache.GetVariableInfoList();
-			
-			int tdIndex = adiDataSetCache.GetVariableIndex("Time & Date");
-			int depthIndex = adiDataSetCache.GetVariableIndex("Depth");
-			int incIndex = adiDataSetCache.GetVariableIndex("Inclination");
-			int aziIndex = adiDataSetCache.GetVariableIndex("Azimuth");
-			int gc1Index = adiDataSetCache.GetVariableIndex("Gtotal Counts");
-			int gc2Index = adiDataSetCache.GetVariableIndex("Cnts DH LC Az");
-			
-			if(tdIndex == -1 || depthIndex == -1 ){
-				if(!refreshing){
-					MessageBox.Show("Record 'Survey | Realtime_Evader' is empty or corrupted.");
-					status.Text = "";
-				} else {
-					status.Text = "Record 'Survey | Realtime_Evader' is empty or corrupted.";
-				}
-				return;
-			}
-			
-			int len = adiDataSetCache.GetNumberOfRecords();
-			progressbar.Maximum = len;
-			
-			SurveysList.Clear();
-			
-			for (int i = 0; i <= len; i++)
-			{
-				string time = "";
-				double depth = 0.0;
-				double inc = 0.0;
-				double azi = 0.0;
-				double qc1 = 0.0;
-				double qc2 = 0.0;
-				adiDataSetCache.GetValue(tdIndex, i, ref time);
-				adiDataSetCache.GetValue(depthIndex, i, ref depth);
-				adiDataSetCache.GetValue(incIndex, i, ref inc);
-				adiDataSetCache.GetValue(aziIndex, i, ref azi);
-				adiDataSetCache.GetValue(gc1Index, i, ref qc1);
-				adiDataSetCache.GetValue(gc2Index, i, ref qc2);
-				
-				Survey survey = new Survey();
-				
-				if(time != "")
-				{
-					survey.date = time;
-					survey.detph = (depth*0.3048).ToString("F2");
-					survey.inc = inc.ToString("F2");
-					survey.azi = azi.ToString("F2");
-					survey.QC1 = qc1.ToString("F0");
-					survey.QC2 = qc2.ToString("F0");
-					
-					SurveysList.Add(survey);
-				}
-				progressbar.Value = i;
-				
-			}
-			
-			SurveyDataGrid.FirstDisplayedScrollingRowIndex = SurveyDataGrid.Rows.Count - 1;
-			
-			SurveyDataGrid.AutoResizeColumn(0, DataGridViewAutoSizeColumnMode.AllCells);
-			status.Text = "Done";
-			await Task.Delay(500);
-			progressbar.Value = 0;
-			status.Text = "";			
-		}
-		
-		private async Task LoadBateryData()
-		{
-			status.Text = "Gathering Battery data from server...";
-			await Task.Delay(300);
-			pk.Well = wellList.SelectedItem.ToString();
-			pk.Run = runList.SelectedItem.ToString();
-			pk.RecordName = "Evader RT";
-			pk.Description = "Realtime";
-			
-			AdiDataSetCache adiDataSetCache = new AdiDataSetCache(db,pk,AdiDataSet.OpenMode.Read);
-			
-			if(!adiDataSetCache.Open()){
-				if(!refreshing){
-					MessageBox.Show("Record 'Evader RT' no found on selected Well/Run");
-				status.Text = "";
-				} else {
-					status.Text = "Record 'Evader RT' no found on selected Well/Run";
-				}
-				
-				return;
-			}
-			
-			List<AdiVarInfo> variables = adiDataSetCache.GetVariableInfoList();
-			
-			int tdIndex = adiDataSetCache.GetVariableIndex("Time & Date");
-			int depthIndex = adiDataSetCache.GetVariableIndex("Depth");
-			int sw1Index = adiDataSetCache.GetVariableIndex("Status 1");
-			int sw2Index = adiDataSetCache.GetVariableIndex("Status 2");
-			
-			if(tdIndex == -1 || depthIndex == -1 ){
-				if(!refreshing){
-					MessageBox.Show("Record 'Evader RT' may be empty or corrupted.");
-					status.Text = "";
-				} else {
-					status.Text = "Record 'Evader RT' may be empty or corrupted.";
-				}
-				
-				return;
-			}
-			
-			int len = adiDataSetCache.GetNumberOfRecords();
-			progressbar.Maximum = len;
-			
-			StatusWordList.Clear();
-			
-			for (int i = 0; i <= len; i++)
-			{
-				string time = "";
-				ushort word1 = 0;
-				ushort word2 = 0;
+		private GyroSurvey DicToGyroSurvey(Dictionary<string, string> dic) { 
+			GyroSurvey survey = new GyroSurvey();
+            survey.status = dic["Survey Enabled"];
+            survey.date = dic["Time & Date"];
+            survey.detph = dic["Depth"]; 
+            survey.inc = dic["Inclination"]; 
+            survey.azi = dic["Azimuth"]; 
+            survey.QC1 = dic["Gtotal Counts"]; 
+            survey.QC2 = dic["Cnts DH LC Az"];
 
-				adiDataSetCache.GetValue(tdIndex, i, ref time);
-				adiDataSetCache.GetValue(sw1Index, i, ref word1);
-				adiDataSetCache.GetValue(sw2Index, i, ref word2);
-				
-				StatusWord sw = new StatusWord();
-				
-				if(time != "")
-				{
-					sw.date = time;
-					sw.Word1 = word1.ToString();
-					sw.Word2 = word2.ToString();
-					
-					StatusWordList.Add(sw);
-				}
+			//survey.isStable();
+
+            return survey;
+		}
+
+        private MWDSurvey DicToMWDSurvey(Dictionary<string, string> dic)
+        {
+            MWDSurvey survey = new MWDSurvey();
+
+            survey.date = dic["Time & Date"];
+            survey.detph = dic["Depth"];
+            survey.inc = dic["Inclination"];
+            survey.azi = dic["Azimuth"];
+
+            return survey;
+        }
+
+        private StatusWord DicToStatusWord(Dictionary<string, string> dic)
+        {
+            StatusWord sw = new StatusWord();
+
+            sw.date = dic["Time & Date"];
+            sw.Word1 = dic["Status 1"];
+            sw.Word2 = dic["Status 2"];
+
+            return sw;
+        }
+
+        public void GetOficialSurveys()
+		{
+			var pk = new AdiBasePrimaryKey(wellList.SelectedItem.ToString(), runList.SelectedItem.ToString(), "Survey", "Oficial");
+			string[] filter = { "Time & Date", "Depth", "Inclination", "Azimuth" };
+            MWDSurveysList = new BindingList<MWDSurvey>(GetData(pk, filter).Select((item)=> DicToMWDSurvey(item)).ToList());
+
+			Invoke(new Action(() => {
+                MWDSurveys.DataSource = MWDSurveysList;
+            }));
+			
+        }
+
+		public void GetGyroSurveys()
+		{
+            var en_pk = new AdiBasePrimaryKey(wellList.SelectedItem.ToString(), runList.SelectedItem.ToString(), "Survey", "Realtime_Evader");
+            var dis_pk = new AdiBasePrimaryKey(wellList.SelectedItem.ToString(), runList.SelectedItem.ToString(), "Survey Disabled", "Realtime_Evader");
+            string[] filter = { "Survey Enabled", "Time & Date", "Depth", "Inclination", "Azimuth", "Gtotal Counts", "Cnts DH LC Az" };
+            
+            
+            var GyroSurveysListEnabled = new List<GyroSurvey>(GetData(en_pk, filter).Select((item) => DicToGyroSurvey(item)).ToList());
+            var GyroSurveysListDisabled = new List<GyroSurvey>(GetData(dis_pk, filter).Select((item) => DicToGyroSurvey(item)).ToList());
+           
+            GyroSurveysList = new BindingList<GyroSurvey>(GyroSurveysListEnabled.Concat(GyroSurveysListDisabled).ToList());
+
+            Invoke(new Action(() => {
+                GyroSurveys.DataSource = GyroSurveysList;
+            }));
+        }
+
+        public void GetStatus()
+        {
+            var pk = new AdiBasePrimaryKey(wellList.SelectedItem.ToString(), runList.SelectedItem.ToString(), "Evader RT", "Realtime");
+            StatusWordList = new BindingList<StatusWord>(GetStatusData(pk).Select((item) => DicToStatusWord(item)).ToList());
+
+            Invoke(new Action(() => {
+                StatusWordDataGrid.DataSource = StatusWordList;
+            }));
+        }
+
+        public List<Dictionary<string, string>> GetData(AdiBasePrimaryKey pk, string[] filter)
+        {
 	
-					
-				progressbar.Value = i;
 
-			}
-			
-			StatusWordDataGrid.FirstDisplayedScrollingRowIndex = StatusWordDataGrid.Rows.Count - 1;
-			StatusWordDataGrid.AutoResizeColumn(0, DataGridViewAutoSizeColumnMode.AllCells);
-			status.Text = "Done";
-			await Task.Delay(500);
-			progressbar.Value = 0;
-			status.Text = "";
-		}
-		
-		private async Task TickAsyncEventHandler(object sender, EventArgs e)
+			this.Invoke(new Action(() => {
+			status.Text = "Gathering data from server...";
+			}));
+				 
+                
+            Task.Delay(100).Wait();
+
+            var ds = new AdiDataSetCache(db, pk, AdiDataSetCache.OpenMode.Read, true, false, false);
+            ds.Open(500);
+
+            var n = ds.GetNumberOfRecords();
+
+            if (n < 0)
+            {
+                MessageBox.Show(string.Format("Record {0} | {1} não encontrado ou vazio!", pk.RecordName, pk.Description));
+                return new List<Dictionary<string, string>>();
+            }
+
+            List<AdiVarInfo> variables = ds.GetVariableInfoList().Where((var) => filter.Contains(var.VarName)).ToList<AdiVarInfo>();
+
+            List<Dictionary<string, string>> data = new List<Dictionary<string, string>>();
+
+            this.Invoke(new Action(() => {
+                progressbar.Maximum = n;
+            }));
+
+            
+
+            for (int i = 0; i < n; i++)
+            {
+
+                Dictionary<string, string> entry = new Dictionary<string, string>();
+
+                foreach (AdiVarInfo variable in variables)
+                {
+                    int varindex = ds.GetVariableIndex(variable.VarName);
+                    if (varindex < 0) continue;
+                    var unitname = ds.GetVarUnitTypeName(varindex);
+                    var unit = db.UnitManager.GetUnitClass(unitname);
+                    string value = "";
+                    ds.GetTextValue(ref value, varindex, i, unit);
+                    entry[variable.VarName] = value;
+
+                }
+                this.Invoke(new Action(() => {
+                    progressbar.Value = i;
+                }));
+                
+                Task.Delay(20).Wait();
+                data.Add(entry);
+            }
+            ds.Close();
+
+            Task.Delay(200).Wait();
+
+            this.Invoke(new Action(() => {
+                progressbar.Value = 0;
+                status.Text = "";
+            }));
+            
+
+            return data;
+           
+
+        }
+
+        public List<Dictionary<string, string>> GetStatusData(AdiBasePrimaryKey pk)
+        {
+
+
+            this.Invoke(new Action(() => {
+                status.Text = "Gathering data from server...";
+            }));
+
+
+            Task.Delay(100).Wait();
+
+            var ds = new AdiDataSetCache(db, pk, AdiDataSetCache.OpenMode.Read, true, false, false);
+            ds.Open(500);
+
+            var n = ds.GetNumberOfRecords();
+
+            if (n < 0)
+            {
+                MessageBox.Show(string.Format("Record {0} | {1} não encontrado ou vazio!", pk.RecordName, pk.Description));
+                return new List<Dictionary<string, string>>();
+            }
+
+            List<AdiVarInfo> variables = ds.GetVariableInfoList();
+
+            List<Dictionary<string, string>> data = new List<Dictionary<string, string>>();
+
+            this.Invoke(new Action(() => {
+                progressbar.Maximum = n;
+            }));
+
+
+
+            for (int i = n-50; i < n; i++)
+            {
+
+                Dictionary<string, string> entry = new Dictionary<string, string>();
+
+                var depth_index = variables.FindIndex((v) => v.VarName == "Time & Date");
+                var st1_index = variables.FindIndex((v) => v.VarName == "Status 1");
+                var st2_index = variables.FindIndex((v) => v.VarName == "Status 2");
+
+                string depth = "";
+                ushort st1 = 0;
+                ushort st2 = 0;
+
+                ds.GetValue(depth_index, i, ref depth);
+                ds.GetValue(st1_index, i, ref st1);
+                ds.GetValue(st2_index, i, ref st2);
+
+                entry["Time & Date"] = depth;
+                entry["Status 1"] = st1.ToString();
+                entry["Status 2"] = st2.ToString();
+
+                this.Invoke(new Action(() => {
+                    progressbar.Value = i;
+                }));
+
+                Task.Delay(20).Wait();
+                data.Add(entry);
+            }
+            ds.Close();
+
+            Task.Delay(200).Wait();
+
+            this.Invoke(new Action(() => {
+                progressbar.Value = 0;
+                status.Text = "";
+            }));
+
+
+            return data;
+
+
+        }
+
+
+        private async Task TickAsyncEventHandler(object sender, EventArgs e)
 		{
-			status.Text = "Automatic refresh active - Last data request: "+ DateTime.Now.ToString();
-			await LoadEvaderData();
-			await LoadBateryData();
 			
-		}
+            GetOficialSurveys();
+            GetGyroSurveys();
+            GetStatus();
+
+            status.Text = "Automatic refresh active - Last data request: " + DateTime.Now.ToString();
+
+        }
 		
 		void WellListSelectedIndexChanged(object sender, EventArgs e)
 		{
@@ -333,7 +419,8 @@ namespace Evader_QC
 			serverSelectBtn.Enabled = state;
 			wellList.Enabled = state;
 			runList.Enabled = state;
-			getDataBtn.Enabled = state;
+            getMWDDataBtn.Enabled = state;
+            getGyroDataBtn.Enabled = state;
 			getStatusWordBtn.Enabled = state;
 			autorefreshperiod.Enabled = state;
 			evaderOnly.Enabled = state;
@@ -354,9 +441,14 @@ namespace Evader_QC
 			try{
 				status.Text = "Disconnecting...";
 				setEnable(false);
+				db.CancelDataSetNotification(1);
+				db.CloseRtRecords();
 				db.CloseDataSets();
 				db.Disconnect();
-			}catch (Exception ex){
+				db.Dispose();
+
+            }
+            catch (Exception ex){
 				MessageBox.Show("Fail to disconnect: " + db.Server);
 			}finally{
 				status.Text = "Bye !";
@@ -374,8 +466,141 @@ namespace Evader_QC
 		{
 			Close();
 		}
-		
-	}
-	
-	
+
+		private void LastColumnFont()
+		{
+            int lastColumnIndex = GyroSurveys.Columns.Count - 1;
+
+            // Define the new font
+            Font newFont = new Font("Fixedsys", 7, FontStyle.Regular);
+
+            // Iterate through each row
+            foreach (DataGridViewRow row in GyroSurveys.Rows)
+            {
+                // Check if the row is not a new row template
+                if (!row.IsNewRow)
+                {
+                    // Get the cell in the last column of the current row
+                    DataGridViewCell lastColumnCell = row.Cells[lastColumnIndex];
+
+                    // Create a new DataGridViewCellStyle to apply the font
+                    DataGridViewCellStyle cellStyle = new DataGridViewCellStyle(lastColumnCell.Style);
+                    cellStyle.Font = newFont;
+
+                    // Apply the new style to the cell
+                    lastColumnCell.Style = cellStyle;
+                }
+            }
+        }
+
+        private void GyroDataGridView_ColumnHeaderMouseClick(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            var dgv = sender as DataGridView;
+			string nomeColuna = dgv.Columns[e.ColumnIndex].DataPropertyName;
+
+            if (gyrocolunaOrdenada == nomeColuna)
+            {
+                // Inverte a direção da ordenação
+                gyrodirecaoOrdenacao = gyrodirecaoOrdenacao == ListSortDirection.Ascending
+                    ? ListSortDirection.Descending
+                    : ListSortDirection.Ascending;
+            }
+            else
+            {
+                // Nova coluna: ordena de forma crescente
+                gyrodirecaoOrdenacao = ListSortDirection.Ascending;
+            }
+
+            gyrocolunaOrdenada = nomeColuna;
+
+            GyroOrdenarDados(dgv, nomeColuna, gyrodirecaoOrdenacao);
+        }
+
+        private void MWDDataGridView_ColumnHeaderMouseClick(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            var dgv = sender as DataGridView;
+            string nomeColuna = dgv.Columns[e.ColumnIndex].DataPropertyName;
+
+            if (mwdcolunaOrdenada == nomeColuna)
+            {
+                // Inverte a direção da ordenação
+                mwddirecaoOrdenacao = mwddirecaoOrdenacao == ListSortDirection.Ascending
+                    ? ListSortDirection.Descending
+                    : ListSortDirection.Ascending;
+            }
+            else
+            {
+                // Nova coluna: ordena de forma crescente
+                mwddirecaoOrdenacao = ListSortDirection.Ascending;
+            }
+
+            mwdcolunaOrdenada = nomeColuna;
+
+            MWDOrdenarDados(dgv, nomeColuna, mwddirecaoOrdenacao);
+        }
+
+        private void GyroOrdenarDados(DataGridView dgv, string nomeColuna, ListSortDirection direcao)
+        {
+            var prop = typeof(GyroSurvey).GetProperty(nomeColuna);
+
+            if (direcao == ListSortDirection.Ascending)
+            {
+                dgv.DataSource = new BindingList<GyroSurvey>(
+                    GyroSurveysList.OrderBy(x => prop.GetValue(x, null)).ToList());
+            }
+            else
+            {
+                dgv.DataSource = new BindingList<GyroSurvey>(
+                    GyroSurveysList.OrderByDescending(x => prop.GetValue(x, null)).ToList());
+            }
+        
+		}
+
+        private void MWDOrdenarDados(DataGridView dgv, string nomeColuna, ListSortDirection direcao)
+        {
+            var prop = typeof(MWDSurvey).GetProperty(nomeColuna);
+
+            if (direcao == ListSortDirection.Ascending)
+            {
+                dgv.DataSource = new BindingList<MWDSurvey>(
+                    MWDSurveysList.OrderBy(x => prop.GetValue(x, null)).ToList());
+            }
+            else
+            {
+                dgv.DataSource = new BindingList<MWDSurvey>(
+                    MWDSurveysList.OrderByDescending(x => prop.GetValue(x, null)).ToList());
+            }
+
+        }
+
+        private void GyroSurveys_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+        {
+            var dgv = sender as DataGridView;
+
+            if (dgv.Rows[e.RowIndex].DataBoundItem is GyroSurvey item)
+            {
+                if (item.status == "Yes")
+                {
+                    dgv.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.LightBlue;
+                    dgv.Rows[e.RowIndex].DefaultCellStyle.ForeColor = Color.Black;
+                }
+                else if (item.status == "No")
+                {
+                    dgv.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.DarkGray;
+                    dgv.Rows[e.RowIndex].DefaultCellStyle.ForeColor = Color.LightGray;
+                }
+            }
+        }
+    }
+
+    partial class SurveyType
+    {
+        public string Text;
+        public string RecordName;
+        public SurveyType(string _text, string recordname)
+        {
+            this.Text = _text;
+            this.RecordName = recordname;
+        }
+    }
 }

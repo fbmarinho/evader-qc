@@ -7,3 +7,16 @@ C:\Users\sperry\Documents\SharpDevelop Projects\Evader QC\Evader QC\obj\Debug\Ev
 C:\Users\sperry\Documents\SharpDevelop Projects\Evader QC\Evader QC\obj\Debug\Evader QC.pdb
 C:\Users\sperry\Documents\SharpDevelop Projects\Evader QC\Evader QC\obj\Debug\Evader_QC.MainForm.resources
 C:\Users\sperry\Documents\SharpDevelop Projects\Evader QC\Evader QC\obj\Debug\Evader_QC.About.resources
+C:\Users\sperry\source\repos\fbmarinho\evader-qc\Evader QC\bin\Debug\Evader QC.exe.config
+C:\Users\sperry\source\repos\fbmarinho\evader-qc\Evader QC\bin\Debug\Evader QC.exe
+C:\Users\sperry\source\repos\fbmarinho\evader-qc\Evader QC\bin\Debug\Evader QC.pdb
+C:\Users\sperry\source\repos\fbmarinho\evader-qc\Evader QC\obj\Debug\Evader QC.csproj.AssemblyReference.cache
+C:\Users\sperry\source\repos\fbmarinho\evader-qc\Evader QC\obj\Debug\Evader_QC.About.resources
+C:\Users\sperry\source\repos\fbmarinho\evader-qc\Evader QC\obj\Debug\Evader_QC.MainForm.resources
+C:\Users\sperry\source\repos\fbmarinho\evader-qc\Evader QC\obj\Debug\Evader QC.csproj.GenerateResource.cache
+C:\Users\sperry\source\repos\fbmarinho\evader-qc\Evader QC\obj\Debug\Evader QC.csproj.CoreCompileInputs.cache
+C:\Users\sperry\source\repos\fbmarinho\evader-qc\Evader QC\obj\Debug\Evader QC.exe
+C:\Users\sperry\source\repos\fbmarinho\evader-qc\Evader QC\obj\Debug\Evader QC.pdb
+C:\Users\sperry\source\repos\fbmarinho\evader-qc\Evader QC\obj\Debug\Evader QC.exe.config
+C:\Users\sperry\source\repos\fbmarinho\evader-qc\Evader QC\obj\Debug\Interop.CoAdi30.dll
+C:\Users\sperry\source\repos\fbmarinho\evader-qc\Evader QC\obj\Debug\Evader QC.csproj.ResolveComReference.cache

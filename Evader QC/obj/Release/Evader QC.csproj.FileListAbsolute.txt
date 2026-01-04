@@ -1,0 +1,11 @@
+C:\Users\sperry\source\repos\fbmarinho\evader-qc\Evader QC\bin\Release\Evader QC.exe.config
+C:\Users\sperry\source\repos\fbmarinho\evader-qc\Evader QC\bin\Release\Evader QC.exe
+C:\Users\sperry\source\repos\fbmarinho\evader-qc\Evader QC\obj\Release\Evader QC.csproj.AssemblyReference.cache
+C:\Users\sperry\source\repos\fbmarinho\evader-qc\Evader QC\obj\Release\Evader_QC.About.resources
+C:\Users\sperry\source\repos\fbmarinho\evader-qc\Evader QC\obj\Release\Evader_QC.MainForm.resources
+C:\Users\sperry\source\repos\fbmarinho\evader-qc\Evader QC\obj\Release\Evader QC.csproj.GenerateResource.cache
+C:\Users\sperry\source\repos\fbmarinho\evader-qc\Evader QC\obj\Release\Evader QC.csproj.CoreCompileInputs.cache
+C:\Users\sperry\source\repos\fbmarinho\evader-qc\Evader QC\obj\Release\Evader QC.exe
+C:\Users\sperry\source\repos\fbmarinho\evader-qc\Evader QC\obj\Release\Evader QC.exe.config
+C:\Users\sperry\source\repos\fbmarinho\evader-qc\Evader QC\obj\Release\Interop.CoAdi30.dll
+C:\Users\sperry\source\repos\fbmarinho\evader-qc\Evader QC\obj\Release\Evader QC.csproj.ResolveComReference.cache
